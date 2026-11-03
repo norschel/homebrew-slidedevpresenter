@@ -14,7 +14,7 @@ brew install --cask norschel/slidedevpresenter/slide-dev-presenter
 ```
 
 The cask supports both Apple Silicon and Intel Macs and verifies the installer
-checksum. It is synchronized from the latest stable
-[SlideDevPresenter release](https://github.com/norschel/SlidevPresenter/releases)
-every 15 minutes. The cask will appear after the first stable release is
-published.
+checksum. A workflow in the
+[SlideDevPresenter repository](https://github.com/norschel/SlidevPresenter)
+publishes each stable release's cask to this tap. It will be available after
+the first stable release is published.
