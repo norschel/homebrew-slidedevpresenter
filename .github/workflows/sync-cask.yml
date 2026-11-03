@@ -1,0 +1,52 @@
+name: Sync Homebrew cask
+
+on:
+  schedule:
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Sync latest stable cask
+        shell: bash
+        run: |
+          set -euo pipefail
+          release_json="$(mktemp)"
+          cask_file="$(mktemp)"
+          trap 'rm -f "$release_json" "$cask_file"' EXIT
+
+          status="$(curl --silent --show-error \
+            --output "$release_json" \
+            --write-out '%{http_code}' \
+            https://api.github.com/repos/norschel/SlidevPresenter/releases/latest)"
+          if [[ "$status" == "404" ]]; then
+            echo "No published stable release yet; skipping cask sync."
+            exit 0
+          fi
+          if [[ "$status" != "200" ]]; then
+            echo "GitHub Releases API returned HTTP $status."
+            exit 1
+          fi
+
+          asset_url="$(jq -er '.assets[] | select(.name == "slide-dev-presenter.rb") | .browser_download_url' "$release_json")"
+          curl --fail --location --silent --show-error "$asset_url" --output "$cask_file"
+          grep -Fq 'cask "slide-dev-presenter" do' "$cask_file"
+
+          mkdir -p Casks
+          install -m 0644 "$cask_file" Casks/slide-dev-presenter.rb
+          if git diff --quiet -- Casks/slide-dev-presenter.rb; then
+            echo "Homebrew cask is already up to date."
+            exit 0
+          fi
+
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add Casks/slide-dev-presenter.rb
+          git commit -m "Update SlideDevPresenter cask"
+          git push
